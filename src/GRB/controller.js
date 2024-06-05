@@ -1,6 +1,7 @@
 const pool = require("../../db");
 const queries = require("./queries");
 
+// function for get all of the book list
 const getBook = (req, res) => {
   pool.query(queries.getBook, (error, results) => {
     if (error) throw error;
@@ -8,6 +9,7 @@ const getBook = (req, res) => {
   });
 };
 
+// function for get all of the book list from BookNumber
 const getBookByID = (req, res) => {
   const id = parseInt(req.params.id);
   pool.query(queries.getBookById, [id], (error, results) => {
@@ -16,6 +18,7 @@ const getBookByID = (req, res) => {
   });
 };
 
+// function for get all of the wishlist from UserAccountId
 const getWishlistByUserAccount = (req, res) => {
   const id = parseInt(req.params.id);
   pool.query(queries.getWishlistByUserAccount, [id], (error, results) => {
@@ -24,6 +27,27 @@ const getWishlistByUserAccount = (req, res) => {
   });
 };
 
+// function for add wishlist
+const addWishlist = (req, res) => {
+  const { WishlistID, BookNumber, AddedDate } = req.body;
+  const Account = parseInt(req.params.account);
+
+  pool.query(queries.getUserById, [Account], (error, results) => {
+    pool.query(
+      queries.addWishlist,
+      [WishlistID, BookNumber, AddedDate],
+      (error, results) => {
+        if (error) {
+          console.error("Error adding Wishlist", error.message);
+          return res.status(500).send("An error occurred while adding stock");
+        }
+        res.status(201).send("Wishlist Added Succesfully!");
+      }
+    );
+  });
+};
+
+// function for add new book
 const addNewBook = (req, res) => {
   const {
     BookNumber,
@@ -99,6 +123,7 @@ const addNewBook = (req, res) => {
   });
 };
 
+// function for removing a book from book table
 const removeBook = (req, res) => {
   const id = parseInt(req.params.id);
 
@@ -119,6 +144,7 @@ const removeBook = (req, res) => {
   });
 };
 
+// function for updating BookName, PublicationYear, Pages, PublisherName
 const updateBook = (req, res) => {
   const id = parseInt(req.params.id);
   const { BookName, PublicationYear, Pages, PublisherName } = req.body;
@@ -140,7 +166,7 @@ const updateBook = (req, res) => {
   });
 };
 
-// Search Books by Keywords
+// function for searching book by Keywords or the name of the book
 const searchBooks = (req, res) => {
   const { keywords } = req.query;
 
@@ -156,6 +182,7 @@ const searchBooks = (req, res) => {
   });
 };
 
+// function for searching book using filter and by user input
 const buildQuery = (req, res) => {
   const { filters, sort, limit, offset } = req.body;
   // Query base
@@ -212,25 +239,7 @@ const buildQuery = (req, res) => {
   });
 };
 
-const addWishlist = (req, res) => {
-  const { WishlistID, BookNumber, AddedDate } = req.body;
-  const Account = parseInt(req.params.account);
-
-  pool.query(queries.getUserById, [Account], (error, results) => {
-    pool.query(
-      queries.addWishlist,
-      [WishlistID, BookNumber, AddedDate],
-      (error, results) => {
-        if (error) {
-          console.error("Error adding Wishlist", error.message);
-          return res.status(500).send("An error occurred while adding stock");
-        }
-        res.status(201).send("Wishlist Added Succesfully!");
-      }
-    );
-  });
-};
-
+// TCL to add bought and reduce stock of the book on "Stored"
 const BookBought = (req, res) => {
   const { BookNumber, CustomerNumber, Date, Price, Quantity } = req.body;
 
@@ -286,12 +295,12 @@ const BookBought = (req, res) => {
 module.exports = {
   getBook,
   getBookByID,
+  getWishlistByUserAccount,
   removeBook,
   updateBook,
   searchBooks,
   buildQuery,
   addWishlist,
-  getWishlistByUserAccount,
   BookBought,
   addNewBook,
 };
