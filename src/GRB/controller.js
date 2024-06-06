@@ -41,7 +41,7 @@ const addWishlist = (req, res) => {
           console.error("Error adding Wishlist", error.message);
           return res.status(500).send("An error occurred while adding stock");
         }
-        res.status(201).send("Wishlist Added Succesfully!");
+        res.status(201).send(`Wishlist with id ${WishlistID} added succesfully!`);
       }
     );
   });
@@ -79,7 +79,7 @@ const addNewBook = (req, res) => {
     }
 
     // Check if BookName exists
-    client.query(queries.checkBookNameExist, [BookName], (err, results) => {
+    pool.query(queries.checkBookNameExist, [BookName], (err, results) => {
       if (err) {
         done();
         console.error("Error checking book name existence:", err);
@@ -88,11 +88,11 @@ const addNewBook = (req, res) => {
 
       if (results.rows.length) {
         done();
-        return res.status(400).send("BookName already exists.");
+        return res.status(400).send(`BookName ${BookName} already exists.`);
       }
 
       // Add book to database
-      client.query(
+      pool.query(
         queries.addBook,
         [BookNumber, BookName, PublicationYear, Pages, PublisherName],
         (err, results) => {
@@ -103,7 +103,7 @@ const addNewBook = (req, res) => {
           }
 
           // Add stock to the database
-          client.query(
+          pool.query(
             queries.addStock,
             [BookNumber, InventoryID, Stock],
             (err, results) => {
@@ -114,7 +114,7 @@ const addNewBook = (req, res) => {
               }
               res
                 .status(201)
-                .send("Book created and stock added successfully!");
+                .send(`Book ${BookName} created and stock added successfully!`);
             }
           );
         }
@@ -130,7 +130,6 @@ const removeBook = (req, res) => {
   pool.query(queries.getBookById, [id], (error, results) => {
     const noBookFound = !results.rows.length;
     if (noBookFound) {
-      res.status(201).send("Book doesnt exist in the database");
     }
 
     pool.query(queries.removeStored, [id], (error, results) => {
