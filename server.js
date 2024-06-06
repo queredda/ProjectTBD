@@ -7,9 +7,9 @@ const port = 3000;
 app.use(express.json());
 
 app.get("/", (req, res) => {
-    res.send("Holla");
+    res.send("PROJECT GRB");
 });
 
 app.use("/GRB", GRBRoutes);
 
-app.listen(port, () => console.log(`app listening to port ${port}`));
+app.listen(port, () => console.log(`app connected to port ${port}`));

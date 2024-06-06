@@ -128,8 +128,8 @@ const removeBook = (req, res) => {
   const id = parseInt(req.params.id);
 
   pool.query(queries.getBookById, [id], (error, results) => {
-    const noGRBfound = !results.rows.length;
-    if (noGRBfound) {
+    const noBookFound = !results.rows.length;
+    if (noBookFound) {
       res.status(201).send("Book doesnt exist in the database");
     }
 
@@ -150,8 +150,8 @@ const updateBook = (req, res) => {
   const { BookName, PublicationYear, Pages, PublisherName } = req.body;
 
   pool.query(queries.getBookById, [id], (error, results) => {
-    const noGRBfound = !results.rows.length;
-    if (noGRBfound) {
+    const noBookFound = !results.rows.length;
+    if (noBookFound) {
       res.status(200).send("Book doesnt exist in the database");
     }
 
@@ -184,60 +184,75 @@ const searchBooks = (req, res) => {
 
 // function for searching book using filter and by user input
 const buildQuery = (req, res) => {
-  const { filters, sort, limit, offset } = req.body;
-  // Query base
-  let query =
-    'SELECT b.*, s."Stock" FROM "Book" b LEFT JOIN "Stored" s ON b."BookNumber" = s."BookNumber"';
+  const { filters, sort, limit } = req.body;
+  let query = `
+    SELECT b.*, s."Stock" 
+    FROM "Stored" s 
+    LEFT JOIN "Book" b 
+    ON b."BookNumber" = s."BookNumber"
+  `;
   let queryParams = [];
   let queryConditions = [];
 
-  // Filters Query
+  // Process Filters
   if (filters) {
-    Object.keys(filters).forEach((key, index) => {
+    Object.keys(filters).forEach((key) => {
       if (typeof filters[key] === "object") {
         Object.keys(filters[key]).forEach((condition) => {
-          let paramIndex = queryParams.length + 1;
+          const paramIndex = queryParams.length + 1;
           switch (condition) {
             case "gte":
-              queryConditions.push(`"${key}" >= $${paramIndex}`);
+              queryConditions.push(`b."${key}" >= $${paramIndex}`);
               queryParams.push(filters[key][condition]);
               break;
             case "lte":
-              queryConditions.push(`"${key}" <= $${paramIndex}`);
+              queryConditions.push(`b."${key}" <= $${paramIndex}`);
               queryParams.push(filters[key][condition]);
+              break;
+            case "like":
+              queryConditions.push(`b."${key}" ILIKE $${paramIndex}`);
+              queryParams.push(`%${filters[key][condition]}%`);
+              break;
+            default:
               break;
           }
         });
       } else {
-        let paramIndex = queryParams.length + 1;
-        queryConditions.push(`"${key}" = $${paramIndex}`);
+        const paramIndex = queryParams.length + 1;
+        queryConditions.push(`b."${key}" = $${paramIndex}`);
         queryParams.push(filters[key]);
       }
     });
   }
 
-  // Combine conditions with WHERE clause
+  // Add WHERE clause if there are any conditions
   if (queryConditions.length > 0) {
     query += ` WHERE ${queryConditions.join(" AND ")}`;
   }
 
-  // Sort Query
-  if (sort) {
-    query += ` ORDER BY "${sort.column}" ${sort.direction}`;
+  // Process Sorting
+  if (sort && sort.column && sort.direction) {
+    query += ` ORDER BY b."${sort.column}" ${sort.direction.toUpperCase()}`;
   }
 
-  // Limit Query
+  // Process Limit
   if (limit) {
     queryParams.push(limit);
     query += ` LIMIT $${queryParams.length}`;
   }
 
-  // Execute the Built Query
+  // Execute the Query
   pool.query(query, queryParams, (error, results) => {
-    if (error) throw error;
+    if (error) {
+      console.error('Error executing query:', error);
+      return res.status(500).json({ error: 'An error occurred while executing the query.' });
+    }
     res.status(200).json(results.rows);
   });
 };
+
+module.exports = { buildQuery };
+
 
 // TCL to add bought and reduce stock of the book on "Stored"
 const BookBought = (req, res) => {
